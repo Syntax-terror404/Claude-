@@ -24,8 +24,10 @@ public:
     // value for that field is kept (Bloomberg sends only changed fields).
     void on_quote(double bid, double bid_sz, double ask, double ask_sz, std::vector<Msg>& out) {
         const double ob = bid_, obs = bid_sz_, oa = ask_, oas = ask_sz_;
-        bool bid_changed = upd(bid_, bid) | upd(bid_sz_, bid_sz);
-        bool ask_changed = upd(ask_, ask) | upd(ask_sz_, ask_sz);
+        // Evaluate both updates unconditionally (no short-circuit): each caches its own field.
+        const bool bp = upd(bid_, bid), bs = upd(bid_sz_, bid_sz);
+        const bool ap = upd(ask_, ask), as = upd(ask_sz_, ask_sz);
+        const bool bid_changed = bp || bs, ask_changed = ap || as;
         if (!ok(bid_, bid_sz_) || !ok(ask_, ask_sz_)) return;
         if (to_ticks(bid_) >= to_ticks(ask_)) {  // locked/crossed: reject AND keep prior state
             bid_ = ob; bid_sz_ = obs; ask_ = oa; ask_sz_ = oas;
