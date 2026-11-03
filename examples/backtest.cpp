@@ -1,4 +1,4 @@
-// Usage: backtest [messages] [latency] [seed]
+// Usage: backtest [messages] [latency] [seed] [equity.csv]
 #include <cstdio>
 #include <cstdlib>
 
@@ -22,7 +22,17 @@ int main(int argc, char** argv) {
     std::printf("source=%s messages=%zu latency=%llu msgs taker_fee=%.2f maker_fee=%.2f (ticks/share)\n",
                 src.name().c_str(), n, (unsigned long long)cfg.latency, cfg.taker_fee, cfg.maker_fee);
     lob::MarketMaker mm;
-    show("market-maker", lob::Engine(cfg).run(src.all(), mm));
+    auto rm = lob::Engine(cfg).run(src.all(), mm);
+    show("market-maker", rm);
     lob::ImbalanceTaker it;
-    show("imbalance-taker", lob::Engine(cfg).run(src.all(), it));
+    auto ri = lob::Engine(cfg).run(src.all(), it);
+    show("imbalance-taker", ri);
+    if (argc > 4) {  // sampled net equity (ticks, after fees) for both strategies
+        std::FILE* f = std::fopen(argv[4], "w");
+        if (!f) { std::perror("equity csv"); return 1; }
+        std::fprintf(f, "seq,market_maker,imbalance_taker\n");
+        for (std::size_t i = 0; i < rm.equity.size() && i < ri.equity.size(); ++i)
+            std::fprintf(f, "%zu,%.1f,%.1f\n", (i + 1) * cfg.sample_every, rm.equity[i], ri.equity[i]);
+        std::fclose(f);
+    }
 }

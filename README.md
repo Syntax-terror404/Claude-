@@ -26,12 +26,12 @@ flowchart LR
 
 ## Numbers
 
-Measured on a 4-vCPU cloud container, Release build, synthetic data. Treat them as indicative; rerun on your machine.
+Measured on a 4-vCPU cloud container, Release build, synthetic data, with nothing else running. The VM is noisy, so the table gives the median and range of five runs. Treat them as indicative; rerun on your machine.
 
 | | result |
 |---|---|
-| Order book, 2M mixed ops (30% cancel, ~5% market, IOC) | **3.1 M ops/s**; latency p50 210 ns, p90 870 ns, p99 1.8 µs, p99.9 5.1 µs |
-| Feed pipeline, 1M messages, 2% loss + 1% dup + local reorder | **2.3 M msgs/s**; 27,171 duplicates dropped, 37,473 retransmits, book identical to the clean stream |
+| Order book, 2M mixed ops (30% cancel, ~5% market, IOC) | **2.7 M ops/s** median of 5 runs (range 2.4 to 3.1); latency p50 223 ns, p90 912 ns, p99 2.0 µs, p99.9 5.4 µs (the median run) |
+| Feed pipeline, 1M messages, 2% loss + 1% dup + local reorder | **1.9 M msgs/s** median of 5 runs (range 1.7 to 2.2); 27,171 duplicates dropped, 37,473 retransmits, book identical to the clean stream |
 
 Latency percentiles are per-operation wall-clock including timer overhead; the max (~10 ms) is
 scheduler noise on a shared VM, not the book.

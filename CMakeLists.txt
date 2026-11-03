@@ -95,3 +95,6 @@ if(LOB_WITH_BMQ)
     target_link_libraries(${t} PRIVATE ${BMQ_LIBS} z ssl crypto dl rt pthread)
   endforeach()
 endif()
+
+add_executable(dump_depth examples/dump_depth.cpp)
+target_link_libraries(dump_depth lob)
