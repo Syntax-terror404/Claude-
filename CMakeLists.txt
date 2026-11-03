@@ -28,3 +28,10 @@ target_link_libraries(lob_demo lob)
 
 enable_testing()
 add_test(NAME order_book COMMAND lob_tests)
+
+add_executable(feed_tests tests/test_feed.cpp)
+target_link_libraries(feed_tests lob)
+add_test(NAME feed COMMAND feed_tests)
+
+add_executable(pipeline examples/pipeline.cpp)
+target_link_libraries(pipeline lob)
