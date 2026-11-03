@@ -39,3 +39,18 @@ target_link_libraries(pipeline lob)
 add_executable(wire_tests tests/test_wire.cpp)
 target_link_libraries(wire_tests lob)
 add_test(NAME wire COMMAND wire_tests)
+
+add_executable(bbg_translate_tests tests/test_bbg_translate.cpp)
+target_link_libraries(bbg_translate_tests lob)
+add_test(NAME bbg_translate COMMAND bbg_translate_tests)
+
+# Live Bloomberg source: needs the BLPAPI C++ SDK from Bloomberg (not on public package indexes).
+#   cmake -B build -DLOB_WITH_BLPAPI=ON -DBLPAPI_ROOT=/path/to/blpapi_cpp
+option(LOB_WITH_BLPAPI "Build the BLPAPI market-data source" OFF)
+if(LOB_WITH_BLPAPI)
+  find_path(BLPAPI_INCLUDE blpapi_session.h HINTS ${BLPAPI_ROOT}/include REQUIRED)
+  find_library(BLPAPI_LIB NAMES blpapi3_64 blpapi3_32 blpapi HINTS ${BLPAPI_ROOT}/Linux ${BLPAPI_ROOT}/lib REQUIRED)
+  add_library(lob_blpapi src/blpapi_source.cpp)
+  target_include_directories(lob_blpapi PUBLIC src ${BLPAPI_INCLUDE})
+  target_link_libraries(lob_blpapi PUBLIC lob ${BLPAPI_LIB})
+endif()
