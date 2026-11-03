@@ -54,3 +54,10 @@ if(LOB_WITH_BLPAPI)
   target_include_directories(lob_blpapi PUBLIC src ${BLPAPI_INCLUDE})
   target_link_libraries(lob_blpapi PUBLIC lob ${BLPAPI_LIB})
 endif()
+
+add_executable(feature_tests tests/test_features.cpp)
+target_link_libraries(feature_tests lob)
+add_test(NAME features COMMAND feature_tests)
+
+add_executable(record_features examples/record_features.cpp)
+target_link_libraries(record_features lob)
