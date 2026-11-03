@@ -107,8 +107,13 @@ static void test_cancel_modify() {
     t.clear();
     auto r = b.modify(3, 105, 10, &t);  // no asks: just rests
     CHECK(r.status == Status::Resting);
-    b.submit(limit(5, Side::Sell, 100, 3));
-    CHECK(b.modify(3, 105, 10).status == Status::Rejected || true);  // crossing modify path
+    t.clear();
+    b.submit(limit(5, Side::Sell, 100, 3), &t);  // crosses bid 3 @105, fills at maker price
+    CHECK(t.size() == 1 && t[0].maker_id == 3 && t[0].price == 105 && t[0].qty == 3);
+    // qty increase at same price loses priority: cancel + resubmit, rests with new qty
+    CHECK(b.modify(3, 105, 10).status == Status::Resting);
+    auto d = b.depth(Side::Buy, 1);
+    CHECK(!d.empty() && d[0].price == 105 && d[0].qty == 10);
     CHECK(b.modify(999, 100, 1).reason == RejectReason::UnknownId);
 }
 

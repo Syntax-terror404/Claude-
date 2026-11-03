@@ -35,3 +35,7 @@ add_test(NAME feed COMMAND feed_tests)
 
 add_executable(pipeline examples/pipeline.cpp)
 target_link_libraries(pipeline lob)
+
+add_executable(wire_tests tests/test_wire.cpp)
+target_link_libraries(wire_tests lob)
+add_test(NAME wire COMMAND wire_tests)
