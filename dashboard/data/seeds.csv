@@ -1,0 +1,11 @@
+seed,strategy,net,gross,fees,fills
+1,market-maker,+11213.6,+11250.5,36.9,616
+1,imbalance-taker,-45601.8,-32049.0,13552.8,3112
+2,market-maker,+7369.1,+7403.0,33.9,464
+2,imbalance-taker,-47228.4,-33315.0,13913.4,3170
+3,market-maker,+4036.5,+4054.5,18.0,251
+3,imbalance-taker,-48170.8,-34159.0,14011.8,3214
+4,market-maker,+12162.4,+12199.0,36.6,702
+4,imbalance-taker,-43699.0,-30394.0,13305.0,3008
+5,market-maker,+26808.0,+26841.0,33.0,1664
+5,imbalance-taker,-38876.6,-27005.0,11871.6,2731

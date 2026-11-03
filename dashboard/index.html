@@ -1,0 +1,296 @@
+<meta name="dash-one-writer">
+<style>
+  /* Layout: a research-notebook page. A takeaway and four headline figures on top, then one chart card per
+     question (performance, strategies, signal, book shape, transport), each with a plain note about what it can and cannot show. */
+  .lx { max-width: 72rem; margin-inline: auto; display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
+  .lx h1 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 2rem; margin: 0; text-wrap: balance; }
+  .lx h2 { font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); margin: 0; }
+  .lx p { margin: 0; }
+  .lx .lede { color: var(--color-fg-muted); max-width: 60ch; }
+  .lx .take { font-family: var(--font-anthropic-serif); font-size: 1.25rem; line-height: 1.45; max-width: 62ch; text-wrap: pretty; }
+  .lx .take b { font-weight: 500; font-variant-numeric: tabular-nums; }
+  .lx .flag { display: inline-flex; gap: .5rem; align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); border: 1px solid var(--color-border-line); border-radius: 999px; padding: .2rem .7rem; width: fit-content; }
+  .lx .flag::before { content: ""; width: .45rem; height: .45rem; border-radius: 50%; background: var(--color-warn); }
+  .lx .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); gap: var(--cds-gap-md); }
+  .lx .tile { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+  .lx .tile .v { font-family: var(--font-anthropic-serif); font-size: 2rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .lx .tile .u { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .lx .tile .k { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .lx .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--cds-gap-md); }
+  .lx .card { background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); padding: var(--cds-pad-lg); display: flex; flex-direction: column; gap: var(--cds-gap-sm); min-width: 0; }
+  .lx .card .note { color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); max-width: 70ch; }
+  .lx .wide { grid-column: 1 / -1; }
+  .lx .chart { min-height: 15rem; position: relative; }
+  .lx .chart.short { min-height: 11rem; }
+  .lx .chart.tall { min-height: 17rem; }
+  .lx svg { display: block; overflow: visible; }
+  .lx svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); }
+  .lx svg text.strong { fill: var(--color-fg); }
+  .lx .tablewrap { overflow-x: auto; }
+  .lx table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: var(--cds-font-size-caption); }
+  .lx th { text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: .35rem .6rem; border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .lx td { padding: .35rem .6rem; border-bottom: 1px solid var(--color-border-line); }
+  .lx th.n, .lx td.n { text-align: right; }
+  .lx .neg { color: var(--color-bad); }
+  .lx .legend { display: flex; flex-wrap: wrap; gap: .25rem 1rem; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .lx .legend i { display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .35rem; vertical-align: -1px; }
+  .lx .tip { position: absolute; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; z-index: 2; }
+  .lx [data-dash-source-state=empty] { color: transparent; }
+  .lx [data-dash-source-state=refreshing] { opacity: .5; }
+</style>
+
+<div class="lx" id="lx">
+  <header style="display:flex;flex-direction:column;gap:var(--cds-gap-sm)">
+    <span class="flag">Synthetic data. The Bloomberg source has not been run against a Terminal.</span>
+    <h1>Lobster: order book, feed handler and backtest</h1>
+    <p class="lede">Results from the C++ limit order book, the sequenced feed handler, the research harness and the event-driven backtester, all run on a deterministic synthetic feed.</p>
+    <p><a id="repo-link" href="https://github.com/Syntax-terror404/Claude-/tree/claude/vibrant-keller-igafar" style="color:var(--color-fg);text-decoration:underline;text-underline-offset:3px;font-size:var(--cds-font-size-caption)">Source code and tests on GitHub</a></p>
+  </header>
+
+  <p class="take" id="takeaway">
+    The imbalance signal ranks the next price move better than chance (rank correlation <b data-draw="t_ic" data-source="research" data-field="ic" data-where="model=ridge">—</b>),
+    yet trading it ends at <b data-draw="t_taker" data-source="finals" data-field="net" data-where="strategy=imbalance_taker">—</b> ticks after fees,
+    because each move is smaller than the cost of crossing the spread. The market-maker ends at
+    <b data-draw="t_mm" data-source="finals" data-field="net" data-where="strategy=market_maker">—</b> ticks only because the synthetic flow never trades against better information.
+  </p>
+
+  <section class="tiles" aria-label="Headline figures">
+    <div class="tile">
+      <span class="k">Order book, mixed operations</span>
+      <span><span class="v" data-draw="k_ops" data-source="throughput" data-field="million_per_s" data-where="stage=Order%20book">—</span> <span class="u">million ops per second</span></span>
+      <span class="u">Median of five runs, in process</span>
+    </div>
+    <div class="tile">
+      <span class="k">Order book, p99 latency</span>
+      <span><span class="v" data-draw="k_p99" data-source="latency" data-field="ns" data-where="percentile=p99">—</span> <span class="u">nanoseconds</span></span>
+      <span class="u">Includes timer overhead</span>
+    </div>
+    <div class="tile">
+      <span class="k">Feed handler under loss and reordering</span>
+      <span><span class="v" data-draw="k_feed" data-source="throughput" data-field="million_per_s" data-where="stage=Feed%20handler">—</span> <span class="u">million messages per second</span></span>
+      <span class="u">Book identical to the clean stream</span>
+    </div>
+    <div class="tile">
+      <span class="k">Messages through BlazingMQ, book rebuilt</span>
+      <span><span class="v" data-draw="k_bmq" data-source="transport" data-field="received" data-where="run=500k%2C%20queue%20limit%20raised">—</span> <span class="u">received</span></span>
+      <span class="u">Matched the golden book</span>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card wide">
+      <h2>Net equity of the two strategies</h2>
+      <p class="note">Net equity in price ticks after fees, sampled every thousand messages of one run, with orders taking effect ten messages after the decision. Both strategies trade against a replayed feed that does not react to them.</p>
+      <div class="legend" id="equity-legend"><span><i style="background:var(--cds-chart-muted)"></i>Market-maker</span><span><i style="background:var(--cds-chart-muted)"></i>Imbalance-taker</span></div>
+      <div class="chart tall" data-draw="equity_chart" data-source="equity"></div>
+    </div>
+
+    <div class="card">
+      <h2>Order book latency by percentile</h2>
+      <p class="note">Wall-clock time per operation on a shared virtual machine. The slowest operations are scheduler noise as much as book work.</p>
+      <div class="chart short" data-draw="latency_chart" data-source="latency"></div>
+    </div>
+
+    <div class="card">
+      <h2>Throughput by stage</h2>
+      <p class="note">Each stage is a different test, so the bars are not a like-for-like comparison. The BlazingMQ figure comes from a debug-built broker and client sharing four virtual CPUs.</p>
+      <div class="chart short" data-draw="throughput_chart" data-source="throughput"></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Does the order book predict the next move?</h2>
+      <p class="note">Out-of-sample rank correlation between each model's prediction and the price move over the next fifty samples. The grey band is what shuffled labels produce; a result outside it, with a small p-value, is not luck. Predictive is not the same as profitable: see the strategy results.</p>
+      <div class="chart short" data-draw="research_chart" data-source="research"></div>
+      <div class="tablewrap">
+        <table data-source="research" data-row-key="model">
+          <thead><tr><th data-field="model">Model</th><th class="n" data-field="ic">Rank correlation</th><th class="n" data-field="p_value">p-value</th><th class="n" data-field="hit_rate">Direction hit rate</th><th class="n" data-field="up_rate">Share of up moves</th><th class="n" data-field="oos_r2">R² vs predicting zero</th></tr></thead>
+          <tbody data-draw="research_rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card wide">
+      <h2>Resting depth around the mid price</h2>
+      <p class="note">Quantity resting at each price, as ticks from the mid, over one run. Bids and asks use the two colors in the legend, and shading is on a log scale because a few stale orders hold most of the volume. A blank column means the nearest orders were more than ten ticks from the mid at that moment, which the synthetic feed produces when the price drifts away from old orders.</p>
+      <div class="legend"><span><i style="background:var(--cds-chart-muted)" id="hb"></i>Bids</span><span><i style="background:var(--cds-chart-muted)" id="ha"></i>Asks</span></div>
+      <div class="chart tall" data-draw="depth_chart" data-source="depth"></div>
+    </div>
+
+    <div class="card wide">
+      <h2>Five seeds, both strategies</h2>
+      <p class="note">Net and gross profit in ticks on shorter runs. The taker loses even before fees on every seed.</p>
+      <div class="tablewrap">
+        <table data-source="seeds" data-row-key="seed,strategy">
+          <thead><tr><th data-field="seed">Seed</th><th data-field="strategy">Strategy</th><th class="n" data-field="net">Net</th><th class="n" data-field="gross">Gross</th><th class="n" data-field="fees">Fees</th><th class="n" data-field="fills">Fills</th></tr></thead>
+          <tbody data-draw="seed_rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card wide">
+      <h2>Rebuilding the book from a message queue</h2>
+      <p class="note">The consumer rebuilds the book from BlazingMQ and compares it with a golden book built from the same feed. In the last run the broker rejected posts because the consumer lagged behind its queue limit. The feed handler filled the gaps through a retransmit callback that reads an in-process copy of the feed, so it simulates a retransmission service; BlazingMQ retransmitted nothing.</p>
+      <div class="tablewrap">
+        <table data-source="transport" data-row-key="run">
+          <thead><tr><th data-field="run">Run</th><th class="n" data-field="published">Published</th><th class="n" data-field="received">Received</th><th class="n" data-field="retransmits">Gaps filled</th><th data-field="book_matches_golden">Book matches</th></tr></thead>
+          <tbody data-draw="transport_rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <p class="note" style="color:var(--color-fg-muted);font-size:var(--cds-font-size-caption);max-width:70ch">
+    What this does not show: any edge in a real market, fills with market impact, or anything from Bloomberg's network. The Bloomberg source is written but has never been compiled or run against a Terminal.
+  </p>
+</div>
+
+<script>
+  /* ---- shared helpers ---- */
+  const num = (x) => Number(x);
+  const fmt1 = d3.format(',.1f');
+  const rowOf = (g, k, v) => (g.status === 'ok' ? g.data.find((r) => r[k] === v) : undefined);
+  const showText = (el, text) => { el.textContent = text === undefined ? '—' : text; };
+  const place = (el, build) => { el.replaceChildren(); return build(Math.max(el.clientWidth, 280)); };
+  const tooltip = (host) => {
+    let tip = host.querySelector('.tip');
+    if (!tip) { tip = document.createElement('div'); tip.className = 'tip'; tip.hidden = true; host.appendChild(tip); }
+    return {
+      show(html, x, y) { tip.textContent = ''; html.forEach((line, i) => { const d = document.createElement('div'); d.textContent = line; if (i === 0) d.style.color = 'var(--cds-text-secondary)'; tip.appendChild(d); }); tip.hidden = false; const w = tip.offsetWidth; tip.style.left = Math.max(0, Math.min(x + 12, host.clientWidth - w)) + 'px'; tip.style.top = Math.max(0, y - 36) + 'px'; },
+      hide() { tip.hidden = true; }
+    };
+  };
+
+  /* ---- derived values ---- */
+  dash.calc('finals', {
+    inputs: ['equity'],
+    title: 'Final net equity by strategy',
+    description: 'Net equity in ticks, after fees, at the last sample of the one-million-message run.',
+    fn: (equity) => {
+      const last = equity[equity.length - 1];
+      return [{ strategy: 'market_maker', net: Number(last.market_maker) }, { strategy: 'imbalance_taker', net: Number(last.imbalance_taker) }];
+    }
+  });
+
+  /* ---- numbers ---- */
+  dash.draw('t_ic', (el) => { const r = rowOf(dash.data('research'), 'model', 'ridge'); showText(el, r && r.ic); });
+  dash.draw('t_taker', (el) => { const g = dash.data('finals'); const r = rowOf(g, 'strategy', 'imbalance_taker'); showText(el, r && fmt1(r.net)); });
+  dash.draw('t_mm', (el) => { const g = dash.data('finals'); const r = rowOf(g, 'strategy', 'market_maker'); showText(el, r && fmt1(r.net)); });
+  dash.draw('k_ops', (el) => { const r = rowOf(dash.data('throughput'), 'stage', 'Order book'); showText(el, r && r.million_per_s); });
+  dash.draw('k_feed', (el) => { const r = rowOf(dash.data('throughput'), 'stage', 'Feed handler'); showText(el, r && r.million_per_s); });
+  dash.draw('k_p99', (el) => { const r = rowOf(dash.data('latency'), 'percentile', 'p99'); showText(el, r && r.ns); });
+  dash.draw('k_bmq', (el) => { const r = rowOf(dash.data('transport'), 'run', '500k, queue limit raised'); showText(el, r && r.received); });
+
+  /* ---- tables (words only; the type cites each cell) ---- */
+  const fillRows = (el, id, keyCols, cells) => {
+    const g = dash.data(id);
+    el.replaceChildren();
+    if (g.status !== 'ok') return;
+    g.data.forEach((r) => {
+      const tr = document.createElement('tr');
+      tr.dataset.key = keyCols.map((c) => encodeURIComponent(r[c])).join(',');
+      cells.forEach(([col, cls, neg]) => {
+        const td = document.createElement('td');
+        td.textContent = r[col];
+        if (cls) td.className = cls;
+        if (neg && num(r[col]) < 0) td.classList.add('neg');
+        tr.appendChild(td);
+      });
+      el.appendChild(tr);
+    });
+  };
+  dash.draw('research_rows', (el) => fillRows(el, 'research', ['model'], [['model'], ['ic', 'n'], ['p_value', 'n'], ['hit_rate', 'n'], ['up_rate', 'n'], ['oos_r2', 'n', true]]));
+  dash.draw('seed_rows', (el) => fillRows(el, 'seeds', ['seed', 'strategy'], [['seed'], ['strategy'], ['net', 'n', true], ['gross', 'n', true], ['fees', 'n'], ['fills', 'n']]));
+  dash.draw('transport_rows', (el) => fillRows(el, 'transport', ['run'], [['run'], ['published', 'n'], ['received', 'n'], ['retransmits', 'n'], ['book_matches_golden']]));
+
+  /* ---- equity curves ---- */
+  dash.draw('equity_chart', (el) => {
+    const g = dash.data('equity');
+    el.replaceChildren();
+    if (g.status !== 'ok') return;
+    const rows = g.data.map((r) => ({ seq: num(r.seq), a: num(r.market_maker), b: num(r.imbalance_taker) }));
+    const W = Math.max(el.clientWidth, 280), H = 272, m = { l: 62, r: 118, t: 10, b: 28 };
+    const x = d3.scaleLinear([0, d3.max(rows, (d) => d.seq)], [m.l, W - m.r]);
+    const y = d3.scaleLinear([Math.min(0, d3.min(rows, (d) => Math.min(d.a, d.b))), Math.max(0, d3.max(rows, (d) => Math.max(d.a, d.b)))], [H - m.b, m.t]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    svg.append('g').selectAll('line').data(y.ticks(5)).join('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', (d) => y(d)).attr('y2', (d) => y(d)).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).attr('stroke', 'var(--cds-chart-reference)').attr('stroke-dasharray', '4 3');
+    svg.append('g').selectAll('text').data(y.ticks(5)).join('text').attr('x', m.l - 8).attr('y', (d) => y(d) + 4).attr('text-anchor', 'end').text((d) => d3.format(',')(d));
+    svg.append('g').selectAll('text').data(x.ticks(5)).join('text').attr('x', (d) => x(d)).attr('y', H - 8).attr('text-anchor', 'middle').text((d) => (d === 0 ? '0' : d3.format('.2s')(d)));
+    const line = (k) => d3.line().x((d) => x(d.seq)).y((d) => y(d[k]));
+    [['a', dash.colors[0], 'Market-maker'], ['b', dash.colors[1], 'Imbalance-taker']].forEach(([k, c, name]) => {
+      svg.append('path').datum(rows).attr('d', line(k)).attr('fill', 'none').attr('stroke', c).attr('stroke-width', 2).attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+      const last = rows[rows.length - 1];
+      svg.append('circle').attr('cx', x(last.seq)).attr('cy', y(last[k])).attr('r', 3.5).attr('fill', c);
+      svg.append('text').attr('class', 'strong').attr('x', x(last.seq) + 8).attr('y', y(last[k]) - 2).text(name);
+      svg.append('text').attr('x', x(last.seq) + 8).attr('y', y(last[k]) + 11).text(d3.format(',.0f')(last[k]));
+    });
+    document.querySelectorAll('#equity-legend i').forEach((i, n) => { i.style.background = dash.colors[n]; });
+    const tip = tooltip(el), bis = d3.bisector((d) => d.seq).center;
+    const hoverLine = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-axis)').attr('opacity', 0);
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [px] = d3.pointer(ev); const d = rows[bis(rows, x.invert(px))]; hoverLine.attr('x1', x(d.seq)).attr('x2', x(d.seq)).attr('opacity', 1); tip.show([`After ${d3.format(',')(d.seq)} messages`, `Market-maker  ${d3.format(',.1f')(d.a)}`, `Imbalance-taker  ${d3.format(',.1f')(d.b)}`], x(d.seq), 40); })
+      .on('pointerleave', () => { hoverLine.attr('opacity', 0); tip.hide(); });
+  });
+
+  /* ---- horizontal bar charts ---- */
+  const hbars = (el, items, fmt, color) => {
+    el.replaceChildren();
+    const W = Math.max(el.clientWidth, 280), rowH = 34, m = { l: 150, r: 64, t: 4, b: 4 }, H = items.length * rowH + m.t + m.b;
+    const x = d3.scaleLinear([0, d3.max(items, (d) => d.v)], [0, W - m.l - m.r]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    items.forEach((d, i) => {
+      const yy = m.t + i * rowH;
+      svg.append('text').attr('class', 'strong').attr('x', m.l - 10).attr('y', yy + rowH / 2 + 4).attr('text-anchor', 'end').text(d.label);
+      svg.append('rect').attr('x', m.l).attr('y', yy + 5).attr('width', Math.max(2, x(d.v))).attr('height', rowH - 12).attr('rx', 3).attr('fill', color);
+      svg.append('text').attr('x', m.l + Math.max(2, x(d.v)) + 8).attr('y', yy + rowH / 2 + 4).text(fmt(d.v));
+    });
+  };
+  dash.draw('latency_chart', (el) => { const g = dash.data('latency'); el.replaceChildren(); if (g.status !== 'ok') return; hbars(el, g.data.map((r) => ({ label: r.percentile, v: num(r.ns) })), (v) => d3.format(',')(v) + ' ns', dash.colors[0]); });
+  dash.draw('throughput_chart', (el) => { const g = dash.data('throughput'); el.replaceChildren(); if (g.status !== 'ok') return; hbars(el, g.data.map((r) => ({ label: r.stage, v: num(r.million_per_s) })), (v) => (v < 0.1 ? d3.format('.3f')(v) : d3.format('.2f')(v)) + ' M/s', dash.colors[2]); });
+
+  /* ---- research: rank correlation against the shuffled-label band ---- */
+  dash.draw('research_chart', (el) => {
+    const g = dash.data('research');
+    el.replaceChildren();
+    if (g.status !== 'ok') return;
+    const rows = g.data.map((r) => ({ model: r.model, ic: num(r.ic), lo: num(r.null_min), hi: num(r.null_max), cl: num(r.ci_low), ch: num(r.ci_high) }));
+    const W = Math.max(el.clientWidth, 280), rowH = 52, m = { l: 110, r: 20, t: 8, b: 30 }, H = rows.length * rowH + m.t + m.b;
+    const x = d3.scaleLinear([Math.min(-0.1, d3.min(rows, (d) => d.lo)), Math.max(0.1, d3.max(rows, (d) => d.ch))], [m.l, W - m.r]).nice();
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    svg.append('g').selectAll('line').data(x.ticks(6)).join('line').attr('x1', (d) => x(d)).attr('x2', (d) => x(d)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-grid)');
+    svg.append('g').selectAll('text').data(x.ticks(6)).join('text').attr('x', (d) => x(d)).attr('y', H - 10).attr('text-anchor', 'middle').text((d) => d3.format('+.2f')(d));
+    svg.append('line').attr('x1', x(0)).attr('x2', x(0)).attr('y1', m.t).attr('y2', H - m.b).attr('stroke', 'var(--cds-chart-reference)');
+    rows.forEach((d, i) => {
+      const yy = m.t + i * rowH + rowH / 2;
+      svg.append('text').attr('class', 'strong').attr('x', m.l - 10).attr('y', yy + 4).attr('text-anchor', 'end').text(d.model);
+      svg.append('rect').attr('x', x(d.lo)).attr('y', yy - 10).attr('width', x(d.hi) - x(d.lo)).attr('height', 20).attr('rx', 3).attr('fill', 'var(--cds-chart-muted)').attr('opacity', 0.45);
+      svg.append('line').attr('x1', x(d.cl)).attr('x2', x(d.ch)).attr('y1', yy).attr('y2', yy).attr('stroke', dash.colors[0]).attr('stroke-width', 2);
+      svg.append('circle').attr('cx', x(d.ic)).attr('cy', yy).attr('r', 5).attr('fill', dash.colors[0]);
+      svg.append('text').attr('x', x(d.ic)).attr('y', yy - 14).attr('text-anchor', 'middle').attr('class', 'strong').text(d3.format('+.3f')(d.ic));
+    });
+  });
+
+  /* ---- order book depth heatmap ---- */
+  dash.draw('depth_chart', (el) => {
+    const g = dash.data('depth');
+    el.replaceChildren();
+    if (g.status !== 'ok') return;
+    const rows = g.data.map((r) => ({ seq: num(r.seq), o: num(r.offset), side: r.side, q: num(r.qty) }));
+    const seqs = [...new Set(rows.map((r) => r.seq))].sort((a, b) => a - b), offs = d3.range(d3.min(rows, (r) => r.o), d3.max(rows, (r) => r.o) + 1);
+    const W = Math.max(el.clientWidth, 280), m = { l: 44, r: 8, t: 6, b: 28 }, cw = (W - m.l - m.r) / seqs.length, ch = 12, H = offs.length * ch + m.t + m.b;
+    const qmax = d3.max(rows, (r) => r.q), a = (q) => (q > 0 ? 0.08 + 0.92 * Math.log1p(q) / Math.log1p(qmax) : 0);
+    const xi = new Map(seqs.map((s, i) => [s, i]));
+    document.querySelectorAll('#hb').forEach((i) => { i.style.background = dash.colors[0]; });
+    document.querySelectorAll('#ha').forEach((i) => { i.style.background = dash.colors[1]; });
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+    svg.append('g').selectAll('rect').data(rows.filter((r) => r.q > 0)).join('rect')
+      .attr('x', (r) => m.l + xi.get(r.seq) * cw).attr('y', (r) => m.t + (r.o - offs[0]) * ch).attr('width', Math.ceil(cw)).attr('height', ch - 1)
+      .attr('fill', (r) => (r.side === 'bid' ? dash.colors[0] : dash.colors[1])).attr('fill-opacity', (r) => a(r.q));
+    svg.append('g').selectAll('text').data(offs.filter((o) => o % 5 === 0)).join('text').attr('x', m.l - 8).attr('y', (o) => m.t + (o - offs[0]) * ch + ch - 2).attr('text-anchor', 'end').text((o) => d3.format('+d')(o).replace('+0', '0'));
+    svg.append('g').selectAll('text').data(d3.range(0, seqs.length, Math.max(1, Math.round(seqs.length / 5)))).join('text').attr('x', (i) => m.l + i * cw).attr('y', H - 8).text((i) => d3.format('.2s')(seqs[i]));
+    const tip = tooltip(el);
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', offs.length * ch).attr('fill', 'transparent')
+      .on('pointermove', (ev) => { const [px, py] = d3.pointer(ev); const i = Math.min(seqs.length - 1, Math.max(0, Math.floor((px - m.l) / cw))); const o = offs[Math.min(offs.length - 1, Math.max(0, Math.floor((py - m.t) / ch)))]; const r = rows.find((z) => z.seq === seqs[i] && z.o === o); tip.show([`After ${d3.format(',')(seqs[i])} messages`, `${d3.format('+d')(o).replace('+0', '0')} ticks from mid`, r && r.q > 0 ? `${d3.format(',')(r.q)} resting (${r.side})` : 'nothing resting'], px, py); })
+      .on('pointerleave', () => tip.hide());
+  });
+</script>

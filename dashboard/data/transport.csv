@@ -1,0 +1,4 @@
+run,published,received,retransmits,book_matches_golden,note
+"20k, queue limit raised",20000,20000,0,yes,
+"500k, queue limit raised",500000,500000,0,yes,
+"20k, stock 1,000-message limit",20000,17257,2743,yes,Broker rejected posts; gaps filled by a simulated retransmit callback

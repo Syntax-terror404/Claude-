@@ -1,0 +1,4 @@
+stage,million_per_s,unit,note
+Order book,2.67,ops,"2M mixed ops, in process (median of 5 runs)"
+Feed handler,1.94,msgs,"1M msgs, 2% loss, 1% dup, reordering (median of 5 runs)"
+BlazingMQ round trip,0.024,msgs,"500k msgs, debug-built broker, shared 4 vCPU (single run)"
