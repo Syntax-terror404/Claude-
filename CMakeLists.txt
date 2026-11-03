@@ -61,3 +61,10 @@ add_test(NAME features COMMAND feature_tests)
 
 add_executable(record_features examples/record_features.cpp)
 target_link_libraries(record_features lob)
+
+add_executable(backtest_tests tests/test_backtest.cpp)
+target_link_libraries(backtest_tests lob)
+add_test(NAME backtest COMMAND backtest_tests)
+
+add_executable(backtest examples/backtest.cpp)
+target_link_libraries(backtest lob)
