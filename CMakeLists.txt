@@ -68,3 +68,30 @@ add_test(NAME backtest COMMAND backtest_tests)
 
 add_executable(backtest examples/backtest.cpp)
 target_link_libraries(backtest lob)
+
+# BlazingMQ transport (opt-in; BlazingMQ takes about an hour to build from source, so CI skips it).
+#   cmake -B build-bmq -DLOB_WITH_BMQ=ON -DBMQ_ROOT=/path/to/blazingmq   (a tree built with bin/build-ubuntu.sh)
+# BlazingMQ is built as C++23 with BDE debug settings; targets below mirror those defines for ABI parity.
+option(LOB_WITH_BMQ "Build BlazingMQ publisher/consumer" OFF)
+if(LOB_WITH_BMQ)
+  set(BMQ_ROOT "" CACHE PATH "BlazingMQ source tree, built via bin/build-ubuntu.sh")
+  if(NOT BMQ_ROOT)
+    message(FATAL_ERROR "set -DBMQ_ROOT=<blazingmq tree>")
+  endif()
+  file(GLOB BMQ_GROUP_DIRS LIST_DIRECTORIES true ${BMQ_ROOT}/src/groups/bmq/*)
+  set(BMQ_LIBS ${BMQ_ROOT}/build/blazingmq/src/groups/bmq/libbmq.a
+      ${BMQ_ROOT}/lib64/opt_exc_mt/libntc.a ${BMQ_ROOT}/lib64/opt_exc_mt/libnts.a
+      ${BMQ_ROOT}/lib64/libbal.a ${BMQ_ROOT}/lib64/libbdl.a ${BMQ_ROOT}/lib64/libbsl.a
+      ${BMQ_ROOT}/lib64/libbbryu.a ${BMQ_ROOT}/lib64/libinteldfp.a ${BMQ_ROOT}/lib64/libpcre2.a)
+  foreach(t bmq_publish bmq_consume)
+    add_executable(${t} examples/${t}.cpp)
+    target_link_libraries(${t} PRIVATE lob)
+    set_target_properties(${t} PROPERTIES CXX_STANDARD 23)
+    target_include_directories(${t} PRIVATE ${BMQ_GROUP_DIRS})
+    target_include_directories(${t} SYSTEM PRIVATE ${BMQ_ROOT}/include)
+    target_compile_definitions(${t} PRIVATE BDE_BUILD_TARGET_64 BDE_BUILD_TARGET_DBG
+      BSLS_ASSERT_LEVEL_ASSERT_SAFE _POSIX_PTHREAD_SEMANTICS _REENTRANT)
+    target_compile_options(${t} PRIVATE -march=westmere -fno-strict-aliasing -pthread)
+    target_link_libraries(${t} PRIVATE ${BMQ_LIBS} z ssl crypto dl rt pthread)
+  endforeach()
+endif()

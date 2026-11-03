@@ -12,6 +12,8 @@ flowchart LR
     S2[BLPAPI L1 source<br/>untested, lab only]
   end
   S1 --> W[Wire format<br/>40-byte packets, CRC32]
+  W -.->|opt-in| Q[BlazingMQ queue]
+  Q -.-> H
   S2 --> T[L1 translator]
   T --> W
   W -->|UDP| H[Feed handler<br/>gap detect, reorder buffer,<br/>dedupe, retransmit]
@@ -81,6 +83,7 @@ python3 tools/research.py --selftest
 
 Sanitizers: `cmake -S . -B build-san -DCMAKE_BUILD_TYPE=Debug -DLOB_SANITIZE=ON`.
 Live Bloomberg source: `-DLOB_WITH_BLPAPI=ON -DBLPAPI_ROOT=/path/to/blpapi_cpp`.
+BlazingMQ transport: `-DLOB_WITH_BMQ=ON -DBMQ_ROOT=/path/to/blazingmq` (needs a built BlazingMQ tree; see `docs/blazingmq.md`).
 
 ## Layout
 
@@ -90,6 +93,7 @@ Live Bloomberg source: `-DLOB_WITH_BLPAPI=ON -DBLPAPI_ROOT=/path/to/blpapi_cpp`.
 | `include/lob/feed.hpp` | synthetic feed, impairment channel, `FeedHandler`, `Analytics` |
 | `include/lob/wire.hpp`, `transport.hpp` | binary packets and UDP transport |
 | `include/lob/source.hpp`, `bbg_translate.hpp`, `src/blpapi_source.*` | source interface, Bloomberg L1 adapter |
+| `examples/bmq_publish.cpp`, `bmq_consume.cpp` | opt-in BlazingMQ transport, see `docs/blazingmq.md` |
 | `include/lob/features.hpp` | causal feature recorder |
 | `include/lob/backtest.hpp` | event-driven backtester and example strategies |
 | `tools/research.py` | walk-forward research harness |
