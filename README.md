@@ -67,6 +67,11 @@ This is infrastructure, and the data is synthetic. Read the findings accordingly
   it needs the BLPAPI SDK from Bloomberg and a logged-in Terminal. It produces an L1 (best bid/ask + trades)
   reconstruction, not a full-depth book. The tick translator behind it is unit-tested.
 
+## Documentation
+
+Start with [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what is tested and what is not, and
+[docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) lists the limitations. The full index is [docs/README.md](docs/README.md).
+
 ## Build and run
 
 ```bash
